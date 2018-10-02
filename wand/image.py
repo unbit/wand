@@ -1656,6 +1656,54 @@ class BaseImage(Resource):
                 self.raise_exception()
 
     @manipulative
+    def scale(self, width=None, height=None):
+        """Change the image size simply by replacing pixels by averaging pixels
+        together when minifying, or replacing pixels when magnifying.
+
+        :param width: the width in the scaled image. default is the original
+                      width
+        :type width: :class:`numbers.Integral`
+        :param height: the height in the scaled image. default is the original
+                       height
+        :type height: :class:`numbers.Integral`
+
+        .. versionadded:: 0.4.5
+
+        """
+        if width is None:
+            width = self.width
+        if height is None:
+            height = self.height
+        if not isinstance(width, numbers.Integral):
+            raise TypeError('width must be a natural number, not ' +
+                            repr(width))
+        elif not isinstance(height, numbers.Integral):
+            raise TypeError('height must be a natural number, not ' +
+                            repr(height))
+        elif width < 1:
+            raise ValueError('width must be a natural number, not ' +
+                             repr(width))
+        elif height < 1:
+            raise ValueError('height must be a natural number, not ' +
+                             repr(height))
+        if self.animation:
+            self.wand = library.MagickCoalesceImages(self.wand)
+            library.MagickSetLastIterator(self.wand)
+            n = library.MagickGetIteratorIndex(self.wand)
+            library.MagickResetIterator(self.wand)
+            for i in xrange(n + 1):
+                library.MagickSetIteratorIndex(self.wand, i)
+                library.MagickScaleImage(self.wand, width, height)
+            library.MagickSetSize(self.wand, width, height)
+        else:
+            r = library.MagickScaleImage(self.wand, width, height)
+            library.MagickSetSize(self.wand, width, height)
+            if not r:
+                self.raise_exception()
+
+
+
+    @manipulative
     def transform(self, crop='', resize=''):
         """Transforms the image using :c:func:`MagickTransformImage`,
         which is a convenience function accepting geometry strings to
